@@ -6,7 +6,8 @@
 
 **双击一次，用 WiFi 投屏 —— 再也不用插数据线。**
 
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-4a6cf7?style=flat-square)](#环境要求)
+[![Platform](https://img.shields.io/badge/Windows-%E5%B7%B2%E9%AA%8C%E8%AF%81-2ea44f?style=flat-square)](#平台支持状态)
+[![Platform](https://img.shields.io/badge/macOS%20%7C%20Linux-%E6%9C%AA%E6%B5%8B%E8%AF%95-yellow?style=flat-square)](#平台支持状态)
 [![scrcpy](https://img.shields.io/badge/scrcpy-%E2%89%A5%202.0-56b3ff?style=flat-square)](https://github.com/Genymobile/scrcpy)
 [![License](https://img.shields.io/badge/license-MIT-5eeaa8?style=flat-square)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](#贡献)
@@ -14,6 +15,33 @@
 [简体中文](README.md) · [English](docs/README_EN.md)
 
 </div>
+
+---
+
+## ⚠️ 平台支持状态
+
+**请先读这一节再决定是否使用。**
+
+| 平台 | 状态 | 说明 |
+|---|---|---|
+| **Windows 10 / 11** | ✅ **已验证** | 完整测试通过。实测环境：Windows 11 + realme RMX5010 (Android 16) + scrcpy 3.3.3 |
+| **Android** | ✅ **已验证** | 手机端使用 scrcpy 官方 `scrcpy-server`，无自定义改动 |
+| **macOS** | ⚠️ **未测试** | 脚本已按规范编写，但**从未在真机执行过**。可能存在未知问题 |
+| **Linux** | ⚠️ **未测试** | 同上 |
+
+**为什么会有未测试的平台？**
+
+作者只有 Windows 环境，而 macOS / Linux 的脚本无法凭空验证。
+与其假装支持，不如如实标注 —— 这样你遇到问题时能立刻判断是自己环境的问题，
+还是脚本本身就没人跑过。
+
+**如果你在 macOS / Linux 上使用**：
+
+- 欢迎反馈结果（成功或失败都有价值），见[贡献](#贡献)
+- 遇到问题请附上完整输出，我会据此修正
+- 在通过实测前，这些脚本请视为**实验性功能**
+
+> 一句话：**Windows 上可以放心用，macOS / Linux 上请做好可能需要自己动手的准备。**
 
 ---
 
@@ -58,10 +86,10 @@ scrcpy
 
 用数据线连上手机，然后：
 
-| 平台 | 操作 |
-|---|---|
-| **Windows** | 双击 `setup.bat` |
-| **macOS / Linux** | `./setup.sh` |
+| 平台 | 操作 | 状态 |
+|---|---|---|
+| **Windows** | 双击 `setup.bat` | ✅ 已验证 |
+| **macOS / Linux** | `./setup.sh` | ⚠️ 未测试 |
 
 脚本会自动：定位 scrcpy → 读取手机 WiFi IP → 开启 TCP 监听 → 建立无线连接 → 写入 `config.ini`。
 
@@ -69,10 +97,10 @@ scrcpy
 
 ### 3. 投屏
 
-| 平台 | 操作 |
-|---|---|
-| **Windows** | 双击 `launch.bat`，或运行 `scripts/create-shortcut.ps1` 生成桌面图标 |
-| **macOS / Linux** | `./launch.sh`，或 `python3 scripts/create-shortcut.py` 生成桌面图标 |
+| 平台 | 操作 | 状态 |
+|---|---|---|
+| **Windows** | 双击 `launch.bat`，或运行 `scripts/create-shortcut.ps1` 生成桌面图标 | ✅ 已验证 |
+| **macOS / Linux** | `./launch.sh`，或 `python3 scripts/create-shortcut.py` 生成桌面图标 | ⚠️ 未测试 |
 
 完成。以后每次投屏都无需插线。
 
@@ -262,16 +290,16 @@ scrcpy-phone-b/   (config.ini -> PHONE_IP=192.168.1.101)
 
 ```
 scrcpy-wireless-launcher/
-├── setup.bat                    # Windows 初始化向导
-├── setup.sh                     # macOS / Linux 初始化向导
-├── launch.bat                   # Windows 启动器
-├── launch.sh                    # macOS / Linux 启动器
+├── setup.bat                    # Windows 初始化向导          [已验证]
+├── launch.bat                   # Windows 启动器              [已验证]
+├── setup.sh                     # macOS / Linux 初始化向导    [未测试]
+├── launch.sh                    # macOS / Linux 启动器        [未测试]
 ├── config.ini.example           # 配置模板（setup 会生成实际的 config.ini）
 ├── scripts/
-│   ├── create-shortcut.ps1      # 生成桌面快捷方式（Windows）
-│   ├── create-shortcut.py       # 生成桌面快捷方式（跨平台）
-│   ├── generate-icon.py         # 重新生成图标
-│   └── fix-encoding.py          # 把 .bat 转回 GBK 编码（改脚本后可能用到）
+│   ├── create-shortcut.ps1      # 生成桌面快捷方式（Windows） [已验证]
+│   ├── create-shortcut.py       # 生成桌面快捷方式（跨平台）  [仅 Windows 分支验证]
+│   ├── generate-icon.py         # 重新生成图标                [已验证]
+│   └── fix-encoding.py          # 把 .bat 转回 GBK 编码       [已验证]
 ├── assets/
 │   ├── icon.png
 │   └── icon.ico
@@ -297,13 +325,18 @@ scrcpy 只会加载**它自己所在目录**下的 `icon.png` 作为窗口图标
 
 ## 环境要求
 
-| 项目 | 要求 |
-|---|---|
-| 操作系统 | Windows 10+ / macOS 11+ / Linux |
-| scrcpy | ≥ 2.0（[下载](https://github.com/Genymobile/scrcpy/releases)） |
-| 手机 | Android 5.0+（Android 11+ 支持音频转发） |
-| 网络 | 手机与电脑处于同一局域网 |
-| 可选 | Python 3.8+（仅生成图标 / 创建快捷方式时需要） |
+| 项目 | 要求 | 状态 |
+|---|---|---|
+| 操作系统 | **Windows 10 / 11** | ✅ 已验证 |
+| 操作系统 | macOS 11+ / Linux | ⚠️ 脚本已提供，**未测试** |
+| scrcpy | ≥ 2.0（[下载](https://github.com/Genymobile/scrcpy/releases)） | ✅ 已在 3.3.3 验证 |
+| 手机 | Android 5.0+（Android 11+ 支持音频转发） | ✅ 已在 Android 16 验证 |
+| 网络 | 手机与电脑处于同一局域网 | ✅ 已验证 |
+| 可选 | Python 3.8+（仅生成图标 / 创建快捷方式时需要） | ✅ 已验证 |
+
+> **关于版本范围**：scrcpy 侧仅在 **3.3.3** 实测过。理论上 ≥ 2.0 都适用
+> （`--no-audio` 需要 2.0+，`--window-title` 需要 2.0+），但未逐一验证。
+> 若你用的是其他版本，欢迎反馈结果。
 
 ---
 
@@ -323,10 +356,35 @@ scrcpy 只会加载**它自己所在目录**下的 `icon.png` 作为窗口图标
 
 ## 贡献
 
-欢迎提 Issue 和 PR。尤其欢迎：
+欢迎提 Issue 和 PR。**特别需要**以下两类反馈：
 
-- **机型适配反馈** —— 某些品牌的 WiFi 网卡名不是 `wlan0`，遇到问题请附上 `adb shell ip addr` 输出
-- **macOS / Linux 实测反馈** —— 目前主要验证环境是 Windows
+### 🙋 macOS / Linux 实测报告（最需要）
+
+`setup.sh` 和 `launch.sh` 是照规范写的，但作者没有这两个环境，
+**从未真正执行过**。如果你用了，无论成功还是失败都请反馈：
+
+**成功了** —— 请告诉我在什么发行版/版本上跑通的，我会把状态改成「已验证」
+
+**失败了** —— 请附上：
+
+```bash
+bash -x ./setup.sh 2>&1 | tail -50   # 带调试输出的执行过程
+```
+
+以及你的系统信息（`sw_vers` 或 `lsb_release -a`）。
+
+### 📱 机型适配反馈
+
+某些品牌的 WiFi 网卡名不是 `wlan0`（可能是 `wlan1`、`wlan2` 或厂商自定义名），
+会导致「读取手机 WiFi IP」失败。遇到请附上：
+
+```bash
+adb shell ip -f inet addr
+```
+
+### 其他
+
+- **scrcpy 版本兼容性** —— 目前只在 3.3.3 上实测，其他版本欢迎反馈
 - **更完善的错误诊断** —— 如果你踩到了脚本没覆盖的坑
 
 ---
@@ -334,7 +392,7 @@ scrcpy 只会加载**它自己所在目录**下的 `icon.png` 作为窗口图标
 ## 致谢
 
 - [scrcpy](https://github.com/Genymobile/scrcpy) by Genymobile —— 本项目只是它的一个易用性封装
-- 所有被测机型的贡献者
+- 所有提供实测反馈的贡献者
 
 ## 许可
 

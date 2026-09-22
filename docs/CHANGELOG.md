@@ -9,6 +9,17 @@
 
 ## [1.0.0] - 2026-09-22
 
+### 平台支持状态
+
+| 平台 | 状态 |
+|---|---|
+| Windows 10 / 11 | ✅ 已验证（Windows 11 + realme RMX5010 / Android 16 + scrcpy 3.3.3） |
+| Android | ✅ 已验证（使用官方 scrcpy-server） |
+| macOS | ⚠️ 未测试（脚本已提供，未经真机执行） |
+| Linux | ⚠️ 未测试（同上） |
+
+> 未测试平台不会在文档中标注为「支持」。README 与徽章均如实反映此状态。
+
 ### 新增
 
 - **初始化向导** `setup.bat` / `setup.sh`
@@ -26,6 +37,7 @@
 - **桌面快捷方式**
   - `scripts/create-shortcut.ps1` —— Windows，无需额外依赖
   - `scripts/create-shortcut.py` —— 跨平台（Windows `.lnk` / macOS `.command` / Linux `.desktop`）
+    ⚠️ 仅 Windows 分支经实测，macOS / Linux 分支未验证
 
 - **项目图标** `scripts/generate-icon.py` —— 纯代码绘制，含多尺寸 ICO
 
@@ -38,9 +50,11 @@
 
 ### 已知问题
 
-- 尚未在 macOS / Linux 上实测
+- **macOS / Linux 未经实测** —— 脚本存在但从未执行，可能存在未知问题（最主要的不确定性）
+- 尚未在 Windows 之外的平台发布验证
 - 部分厂商 ROM 的 WiFi 网卡名非 `wlan0`，可能需手动指定
 - 一个 `config.ini` 对应一台手机，多设备需复制多份目录
+- scrcpy 版本仅在 3.3.3 实测，其他版本未逐一验证
 
 ---
 

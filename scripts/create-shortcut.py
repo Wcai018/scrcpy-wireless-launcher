@@ -6,6 +6,11 @@ Windows   -> 生成 .lnk（需要 pywin32）
 macOS     -> 生成 .command 可执行脚本
 Linux     -> 生成 .desktop 桌面项
 
+⚠️ 验证状态：
+    - Windows 分支：已实测通过
+    - macOS / Linux 分支：按规范编写，**从未在真机执行过**，可能存在问题。
+      如遇错误请反馈：https://github.com/Wcai018/scrcpy-wireless-launcher/issues
+
 用法：
     python create-shortcut.py
 """

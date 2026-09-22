@@ -1,5 +1,9 @@
 name: Lint
 
+# 说明：本工作流只做静态检查（编码、行尾、语法）。
+# CI 通过 ≠ 脚本在真实环境可运行。
+# macOS / Linux 脚本尚未经过真机测试，详见 README 的「平台支持状态」。
+
 on:
   push:
     branches: [ main ]

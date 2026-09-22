@@ -6,7 +6,8 @@
 
 **Double-click once. Screen mirror over WiFi. Never plug in a cable again.**
 
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-4a6cf7?style=flat-square)](#requirements)
+[![Platform](https://img.shields.io/badge/Windows-verified-2ea44f?style=flat-square)](#platform-support-status)
+[![Platform](https://img.shields.io/badge/macOS%20%7C%20Linux-untested-yellow?style=flat-square)](#platform-support-status)
 [![scrcpy](https://img.shields.io/badge/scrcpy-%E2%89%A5%202.0-56b3ff?style=flat-square)](https://github.com/Genymobile/scrcpy)
 [![License](https://img.shields.io/badge/license-MIT-5eeaa8?style=flat-square)](../LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](#contributing)
@@ -14,6 +15,34 @@
 [简体中文](../README.md) · [English](README_EN.md)
 
 </div>
+
+---
+
+## ⚠️ Platform support status
+
+**Please read this before deciding whether to use this project.**
+
+| Platform | Status | Notes |
+|---|---|---|
+| **Windows 10 / 11** | ✅ **Verified** | Fully tested. Environment: Windows 11 + realme RMX5010 (Android 16) + scrcpy 3.3.3 |
+| **Android** | ✅ **Verified** | Uses the official `scrcpy-server`; no custom modifications |
+| **macOS** | ⚠️ **Untested** | Scripts are written to spec but have **never been executed on real hardware** |
+| **Linux** | ⚠️ **Untested** | Same as above |
+
+**Why are some platforms untested?**
+
+The author only has a Windows environment, and the macOS / Linux scripts
+cannot be verified without one. Rather than pretending to support them,
+this is stated plainly — so you can immediately tell whether a problem
+is your setup or simply code nobody has run yet.
+
+**If you use this on macOS / Linux:**
+
+- Feedback is very welcome (both success and failure), see [Contributing](#contributing)
+- Please attach full output if you hit issues
+- Until verified, treat those scripts as **experimental**
+
+> In short: **safe to use on Windows; on macOS / Linux, be prepared to tinker.**
 
 ---
 
@@ -62,10 +91,10 @@ and **USB debugging enabled** on your phone.
 
 Connect the phone via USB, then:
 
-| Platform | Action |
-|---|---|
-| **Windows** | Double-click `setup.bat` |
-| **macOS / Linux** | `./setup.sh` |
+| Platform | Action | Status |
+|---|---|---|
+| **Windows** | Double-click `setup.bat` | ✅ Verified |
+| **macOS / Linux** | `./setup.sh` | ⚠️ Untested |
 
 The script locates scrcpy, reads the phone's WiFi IP, enables TCP listening,
 establishes the wireless connection, and writes `config.ini`.
@@ -74,10 +103,10 @@ Once you see `[OK] Setup complete!`, you can **unplug the cable**.
 
 ### 3. Mirror
 
-| Platform | Action |
-|---|---|
-| **Windows** | Double-click `launch.bat`, or run `scripts/create-shortcut.ps1` for a desktop icon |
-| **macOS / Linux** | `./launch.sh`, or `python3 scripts/create-shortcut.py` |
+| Platform | Action | Status |
+|---|---|---|
+| **Windows** | Double-click `launch.bat`, or run `scripts/create-shortcut.ps1` for a desktop icon | ✅ Verified |
+| **macOS / Linux** | `./launch.sh`, or `python3 scripts/create-shortcut.py` | ⚠️ Untested |
 
 That's it. No cable needed from now on.
 
@@ -218,15 +247,17 @@ Generate a desktop shortcut in each.
 
 ```
 scrcpy-wireless-launcher/
-├── setup.bat                    # Windows setup wizard
-├── setup.sh                     # macOS / Linux setup wizard
-├── launch.bat                   # Windows launcher
-├── launch.sh                    # macOS / Linux launcher
-├── config.ini                   # Settings (generated, editable)
+├── setup.bat                    # Windows setup wizard       [VERIFIED]
+├── launch.bat                   # Windows launcher           [VERIFIED]
+├── setup.sh                     # macOS / Linux setup        [UNTESTED]
+├── launch.sh                    # macOS / Linux launcher     [UNTESTED]
+├── config.ini.example           # Config template (setup generates config.ini)
 ├── scripts/
-│   ├── create-shortcut.ps1      # Desktop shortcut (Windows)
+│   ├── create-shortcut.ps1      # Desktop shortcut (Windows) [VERIFIED]
 │   ├── create-shortcut.py       # Desktop shortcut (cross-platform)
-│   └── generate-icon.py         # Regenerate the icon
+│   │                            #   [only the Windows branch is verified]
+│   ├── generate-icon.py         # Regenerate the icon        [VERIFIED]
+│   └── fix-encoding.py          # Convert .bat back to GBK   [VERIFIED]
 ├── assets/
 │   ├── icon.png
 │   └── icon.ico
@@ -238,13 +269,18 @@ scrcpy-wireless-launcher/
 
 ## Requirements
 
-| Item | Requirement |
-|---|---|
-| OS | Windows 10+ / macOS 11+ / Linux |
-| scrcpy | ≥ 2.0 ([download](https://github.com/Genymobile/scrcpy/releases)) |
-| Phone | Android 5.0+ (audio forwarding needs Android 11+) |
-| Network | Phone and computer on the same LAN |
-| Optional | Python 3.8+ (only for icon generation / shortcut creation) |
+| Item | Requirement | Status |
+|---|---|---|
+| OS | **Windows 10 / 11** | ✅ Verified |
+| OS | macOS 11+ / Linux | ⚠️ Scripts provided, **untested** |
+| scrcpy | ≥ 2.0 ([download](https://github.com/Genymobile/scrcpy/releases)) | ✅ Verified on 3.3.3 |
+| Phone | Android 5.0+ (audio needs Android 11+) | ✅ Verified on Android 16 |
+| Network | Phone and computer on the same LAN | ✅ Verified |
+| Optional | Python 3.8+ (icon / shortcut generation) | ✅ Verified |
+
+> **On version ranges**: only scrcpy **3.3.3** has been tested. Versions ≥ 2.0
+> should work in theory (`--no-audio` needs 2.0+, `--window-title` needs 2.0+),
+> but this has not been verified one by one. Feedback welcome if you use another version.
 
 ---
 
@@ -265,11 +301,37 @@ See [SECURITY.md](SECURITY.md) for details.
 
 ## Contributing
 
-Issues and PRs are welcome. Especially valuable:
+Issues and PRs are welcome. **Two kinds of feedback are especially needed:**
 
-- **Device compatibility reports** — some vendors don't name their WiFi interface `wlan0`.
-  If you hit issues, please attach the output of `adb shell ip addr`
-- **macOS / Linux testing** — Windows is currently the primary tested platform
+### 🙋 macOS / Linux test reports (most needed)
+
+`setup.sh` and `launch.sh` are written to spec, but the author has neither
+environment and has **never executed them**. If you try them, please report
+back — success or failure:
+
+**Success** — tell me your distro/version and I'll mark it verified
+
+**Failure** — please attach:
+
+```bash
+bash -x ./setup.sh 2>&1 | tail -50   # execution trace
+```
+
+plus your system info (`sw_vers` or `lsb_release -a`).
+
+### 📱 Device compatibility reports
+
+Some vendors don't name their WiFi interface `wlan0` (could be `wlan1`,
+`wlan2`, or a vendor-specific name), which breaks the "read phone WiFi IP" step.
+If you hit this, please attach:
+
+```bash
+adb shell ip -f inet addr
+```
+
+### Other
+
+- **scrcpy version compatibility** — only 3.3.3 has been tested
 - **Better diagnostics** — if you hit a failure mode the scripts don't cover
 
 ---

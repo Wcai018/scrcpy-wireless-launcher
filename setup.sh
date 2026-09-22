@@ -2,6 +2,11 @@
 # ============================================================================
 #  scrcpy-wireless-launcher :: macOS / Linux 初始化向导
 #  https://github.com/Wcai018/scrcpy-wireless-launcher
+#
+#  ⚠️ 本脚本尚未在真机上测试过。
+#     作者只有 Windows 环境，此脚本按规范编写但未经执行验证。
+#     若遇到问题请反馈： bash -x ./setup.sh 2>&1 | tail -50
+#     https://github.com/Wcai018/scrcpy-wireless-launcher/issues
 # ============================================================================
 
 set -uo pipefail
