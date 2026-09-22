@@ -1,0 +1,58 @@
+# ---- 用户配置（含个人 IP，不应提交）----
+config.ini
+
+# ---- 编辑器 / IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+
+# ---- 操作系统 ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---- 项目内不应提交的内容 ----
+# scrcpy 本体（体积大，请用户自行下载）
+scrcpy/
+scrcpy.exe
+scrcpy-server
+adb.exe
+AdbWinApi.dll
+AdbWinUsbApi.dll
+*.dll
+*.so
+*.dylib
+
+# 日志与临时文件
+*.log
+*.tmp
+*.bak
+_test_*.txt
+_*.bat
+
+# ---- 但保留这些 ----
+!assets/*.png
+!assets/*.ico

@@ -1,0 +1,36 @@
+# ============================================================================
+#  行尾与编码规范
+# ----------------------------------------------------------------------------
+#  Windows 批处理 (.bat) -> CRLF + GBK 编码
+#  Unix shell (.sh)      -> LF   （CRLF 会导致 bad interpreter 无法执行）
+#  其他文本文件          -> LF
+# ============================================================================
+
+# 默认：文本文件统一用 LF，由 git 自动处理
+* text=auto eol=lf
+
+# Windows 批处理和 PowerShell 脚本需要 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.vbs text eol=crlf
+
+# Unix shell 脚本必须是 LF，否则在 Linux/macOS 上会报 bad interpreter
+*.sh text eol=lf
+
+# ---- 二进制文件（禁止任何转换）----
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.zip  binary
+*.gz   binary
+*.exe  binary
+*.dll  binary
+*.so   binary
+*.dylib binary
+
+# ---- 批处理文件按文本处理（保留 GBK 字节，不做编码转换）----
+# 注意：git 不会检查或转换文件编码，只处理行尾。
+# 请确保 .bat 文件本身以 GBK (CP936) 保存。

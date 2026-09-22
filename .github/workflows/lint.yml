@@ -1,0 +1,110 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  bat-encoding:
+    name: 检查批处理文件编码 (GBK)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 验证 .bat 文件为 GBK 编码
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem -Filter *.bat | ForEach-Object {
+            $bytes = [System.IO.File]::ReadAllBytes($_.FullName)
+
+            # 尝试以严格 UTF-8 解码（带 BOM 也拒绝）
+            $isUtf8 = $false
+            try {
+              $strict = New-Object System.Text.UTF8Encoding($false, $true)
+              $null = $strict.GetString($bytes)
+              $isUtf8 = $true
+            } catch {
+              $isUtf8 = $false
+            }
+
+            # 有 UTF-8 BOM 也视为错误
+            $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
+
+            if ($isUtf8 -or $hasBom) {
+              Write-Host "❌ $($_.Name) 不是 GBK 编码（UTF-8 或含 BOM）"
+              Write-Host "   Windows 批处理必须保存为 GBK (CP936)"
+              Write-Host "   修复: python scripts/fix-encoding.py"
+              $failed = $true
+            } else {
+              Write-Host "✅ $($_.Name) 编码正确 (GBK)"
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - name: 验证行尾为 CRLF
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem -Include *.bat,*.ps1 -Recurse | ForEach-Object {
+            $content = [System.IO.File]::ReadAllText($_.FullName)
+            $lfOnly = ([regex]::Matches($content, "(?<!\r)\n")).Count
+            if ($lfOnly -gt 0) {
+              Write-Host "❌ $($_.Name) 含有 $lfOnly 处 LF 行尾（应为 CRLF）"
+              $failed = $true
+            } else {
+              Write-Host "✅ $($_.Name) 行尾正确 (CRLF)"
+            }
+          }
+          if ($failed) { exit 1 }
+
+  shellcheck:
+    name: 检查 Shell 脚本
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: 运行 shellcheck
+        run: |
+          shellcheck --severity=warning setup.sh launch.sh || true
+          echo "shellcheck 完成（警告不阻断构建）"
+
+      - name: 检查 bash 语法
+        run: |
+          bash -n setup.sh && echo "✅ setup.sh 语法正确"
+          bash -n launch.sh && echo "✅ launch.sh 语法正确"
+
+  python:
+    name: 检查 Python 脚本
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install pillow
+
+      - name: 检查语法
+        run: |
+          python -m py_compile scripts/create-shortcut.py
+          python -m py_compile scripts/generate-icon.py
+          python -m py_compile scripts/fix-encoding.py
+          echo "✅ Python 脚本语法检查通过"
+
+      - name: 测试图标生成
+        run: python scripts/generate-icon.py
+
+      - name: 验证图标产物
+        run: |
+          test -f assets/icon.png || (echo "❌ 缺少 icon.png" && exit 1)
+          test -f assets/icon.ico || (echo "❌ 缺少 icon.ico" && exit 1)
+          echo "✅ 图标生成正常"

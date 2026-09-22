@@ -1,0 +1,343 @@
+<div align="center">
+
+<img src="assets/icon.png" width="120" alt="scrcpy-wireless-launcher">
+
+# scrcpy-wireless-launcher
+
+**双击一次，用 WiFi 投屏 —— 再也不用插数据线。**
+
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-4a6cf7?style=flat-square)](#环境要求)
+[![scrcpy](https://img.shields.io/badge/scrcpy-%E2%89%A5%202.0-56b3ff?style=flat-square)](https://github.com/Genymobile/scrcpy)
+[![License](https://img.shields.io/badge/license-MIT-5eeaa8?style=flat-square)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](#贡献)
+
+[简体中文](README.md) · [English](docs/README_EN.md)
+
+</div>
+
+---
+
+## 这是什么
+
+[scrcpy](https://github.com/Genymobile/scrcpy) 是目前最好的开源投屏工具，但它的**无线连接**每次都要手敲一串命令：
+
+```bash
+adb tcpip 5555
+adb connect 192.168.1.100:5555
+scrcpy
+```
+
+手机重启后还得再来一遍，IP 变了还得重新查。**这个项目把它变成一次配置、永久使用。**
+
+它做的事情很简单但很实际：
+
+- **一键初始化** —— 插一次数据线，跑 `setup.bat`，自动完成全部配置
+- **一键投屏** —— 之后在桌面双击图标就能投屏，全程无线
+- **自动诊断** —— 连不上时明确告诉你「手机 IP 变了」还是「无线调试关了」，而不是丢一堆报错
+- **换机器可用** —— 配置存在 `config.ini`，拷走整个目录即可迁移
+
+---
+
+## 快速开始
+
+### 1. 准备
+
+需要 **scrcpy ≥ 2.0**（[下载地址](https://github.com/Genymobile/scrcpy/releases)）以及**手机已开启 USB 调试**。
+
+<details>
+<summary><b>怎么开启 USB 调试？</b></summary>
+
+1. 设置 → 关于手机 → 连续点击「版本号」7 次，启用开发者模式
+2. 设置 → 系统 → 开发者选项 → 打开 **USB 调试**
+3. 用数据线连接电脑，手机弹出「允许 USB 调试？」→ 勾选**始终允许** → 点**允许**
+4. 手机和电脑必须连接**同一个局域网**（WiFi）
+
+</details>
+
+### 2. 初始化（只需一次）
+
+用数据线连上手机，然后：
+
+| 平台 | 操作 |
+|---|---|
+| **Windows** | 双击 `setup.bat` |
+| **macOS / Linux** | `./setup.sh` |
+
+脚本会自动：定位 scrcpy → 读取手机 WiFi IP → 开启 TCP 监听 → 建立无线连接 → 写入 `config.ini`。
+
+看到 `[OK] 初始化完成！` 就可以**拔掉数据线**了。
+
+### 3. 投屏
+
+| 平台 | 操作 |
+|---|---|
+| **Windows** | 双击 `launch.bat`，或运行 `scripts/create-shortcut.ps1` 生成桌面图标 |
+| **macOS / Linux** | `./launch.sh`，或 `python3 scripts/create-shortcut.py` 生成桌面图标 |
+
+完成。以后每次投屏都无需插线。
+
+---
+
+## 效果
+
+初始化成功时的输出：
+
+```
+  ==================================================
+     scrcpy 无线投屏 - 初始化向导
+  ==================================================
+
+  [1/6] 定位 scrcpy ...
+  [OK] scrcpy 目录: D:\Tools\scrcpy
+
+  [2/6] 检查 USB 设备 ...
+  [OK] 找到设备: 30d731d7
+
+  [3/6] 读取手机 WiFi IP ...
+  [OK] 手机 IP: 192.168.1.100
+
+  [4/6] 开启手机 adb 的 TCP 监听（端口 5555）...
+  [5/6] 建立无线连接 ...
+  [OK] 无线连接已建立
+
+  [6/6] 写入配置文件 ...
+  [OK] 配置已保存到 config.ini
+
+  ==================================================
+     [OK] 初始化完成！
+  ==================================================
+```
+
+连不上时的提示（**明确告诉你原因和下一步**）：
+
+```
+  [1/3] 检查手机是否在线 192.168.1.100 ...
+  [X] 手机 192.168.1.100 没有响应
+
+  可能原因：
+    1. 手机和电脑不在同一个 WiFi
+    2. 手机 IP 变了（路由器重启 / 换网络）
+    3. 手机 WiFi 断了或进入了睡眠
+
+  怎么办：
+    - 确认手机连着和电脑相同的 WiFi
+    - 查看手机 IP：设置 - WLAN - 当前网络详情
+      若与 192.168.1.100 不同，改 config.ini 里的 PHONE_IP
+    - 或插数据线双击 setup.bat 重新初始化
+```
+
+---
+
+## 为什么需要它
+
+裸用 scrcpy 的无线模式有几个反复踩的坑，这个项目把它们都处理了：
+
+| 问题 | 裸用 scrcpy | 本项目 |
+|---|---|---|
+| 每次投屏要敲 3 条命令 | ✗ | 双击图标 |
+| 手机重启后无线调试失效 | 需重新查手册 | `setup` 一键恢复 |
+| IP 变化后连接失败 | 报 `unable to connect` | 读出实际 IP 并给提示 |
+| 连不上时卡住无响应 | 长时间阻塞 | 先 ping 探活，2 秒内给出诊断 |
+| 换电脑要重新配置 | ✗ | 拷 `config.ini` 即可 |
+
+---
+
+## 配置说明
+
+初始化后生成的 `config.ini`（**可直接手改**）：
+
+```ini
+# 手机在局域网中的 IP 地址
+PHONE_IP=192.168.1.100
+
+# adb 无线端口，默认 5555
+PORT=5555
+
+# scrcpy 所在目录
+SCRCPY_DIR=D:\Tools\scrcpy
+
+# 传给 scrcpy 的额外参数
+EXTRA_ARGS=--no-audio
+```
+
+### 常用参数
+
+改 `EXTRA_ARGS` 这一行即可：
+
+```ini
+# 想要手机声音（Android 11+）
+EXTRA_ARGS=
+
+# 更高画质
+EXTRA_ARGS=--no-audio --max-size=1920 --video-bit-rate=8M
+
+# 降低延迟（游戏场景）
+EXTRA_ARGS=--no-audio --max-size=1024 --max-fps=60 --video-bit-rate=4M
+
+# 保持屏幕常亮
+EXTRA_ARGS=--no-audio --stay-awake
+
+# 关闭手机屏幕（省电，仅投屏）
+EXTRA_ARGS=--no-audio --turn-screen-off
+```
+
+完整参数见 [scrcpy 官方文档](https://github.com/Genymobile/scrcpy/blob/master/doc/video.md)。
+
+---
+
+## 常见问题
+
+<details>
+<summary><b>提示「手机 XX 没有响应」</b></summary>
+
+手机和电脑没在同一网络，或 IP 变了。
+
+1. 确认手机连的是和电脑**同一个** WiFi
+2. 手机上查看当前 IP：设置 → WLAN → 点击当前网络 → 查看 IP 地址
+3. 若与配置不符，改 `config.ini` 里的 `PHONE_IP`，或重跑 `setup`
+
+**建议**：在路由器后台给手机设置静态 IP 绑定（MAC 绑定），一劳永逸。
+
+</details>
+
+<details>
+<summary><b>提示「adb 连接失败」但手机能 ping 通</b></summary>
+
+通常是手机重启过，无线 adb 被关闭了。**插数据线重跑一次 `setup`** 即可。
+
+</details>
+
+<details>
+<summary><b>连接一段时间后自动断开</b></summary>
+
+Android 的 WiFi 省电策略会休眠网络。解决办法：
+
+- 开发者选项 → 打开「**保持唤醒状态**」（充电时不锁屏）
+- 或用数据线供电的同时无线投屏
+- 部分机型需要关闭「WiFi 智能省电」
+
+</details>
+
+<details>
+<summary><b>中文显示乱码 / 脚本报「不是内部或外部命令」</b></summary>
+
+`.bat` 脚本文件被存成了 UTF-8 编码。Windows 批处理需要 **GBK (CP936)** 编码。
+
+修复：用记事本打开脚本，另存为时**编码选择 ANSI**。
+
+> 注：本项目发布的脚本已确保为 GBK 编码。
+
+</details>
+
+<details>
+<summary><b>Windows 上无法创建桌面快捷方式</b></summary>
+
+需要 `pywin32`：
+
+```bash
+pip install pywin32
+```
+
+或直接右键 `scripts/create-shortcut.ps1` → 使用 PowerShell 运行。
+
+</details>
+
+<details>
+<summary><b>支持多台手机吗？</b></summary>
+
+当前版本一个 `config.ini` 对应一台手机。多设备可以复制整个目录：
+
+```
+scrcpy-phone-a/   (config.ini -> PHONE_IP=192.168.1.100)
+scrcpy-phone-b/   (config.ini -> PHONE_IP=192.168.1.101)
+```
+
+每个目录各自生成桌面快捷方式即可。
+
+</details>
+
+---
+
+## 项目结构
+
+```
+scrcpy-wireless-launcher/
+├── setup.bat                    # Windows 初始化向导
+├── setup.sh                     # macOS / Linux 初始化向导
+├── launch.bat                   # Windows 启动器
+├── launch.sh                    # macOS / Linux 启动器
+├── config.ini.example           # 配置模板（setup 会生成实际的 config.ini）
+├── scripts/
+│   ├── create-shortcut.ps1      # 生成桌面快捷方式（Windows）
+│   ├── create-shortcut.py       # 生成桌面快捷方式（跨平台）
+│   ├── generate-icon.py         # 重新生成图标
+│   └── fix-encoding.py          # 把 .bat 转回 GBK 编码（改脚本后可能用到）
+├── assets/
+│   ├── icon.png
+│   └── icon.ico
+├── docs/
+│   ├── README_EN.md             # English documentation
+│   ├── SECURITY.md              # 安全说明
+│   ├── CONTRIBUTING.md          # 贡献指南
+│   └── CHANGELOG.md             # 更新日志
+└── .github/workflows/lint.yml   # CI：编码与语法检查
+```
+
+---
+
+## 关于窗口图标
+
+scrcpy 只会加载**它自己所在目录**下的 `icon.png` 作为窗口图标。
+`setup` 脚本会在初始化时自动把 `assets/icon.png` 复制过去（若该位置尚无此文件）。
+
+> 不同版本的 scrcpy 对图标参数支持不同：`--window-icon` 是 4.x 才引入的，
+> 3.x 及更早版本只能靠目录内的 `icon.png` 自动加载。本项目采用兼容全部版本的方案。
+
+---
+
+## 环境要求
+
+| 项目 | 要求 |
+|---|---|
+| 操作系统 | Windows 10+ / macOS 11+ / Linux |
+| scrcpy | ≥ 2.0（[下载](https://github.com/Genymobile/scrcpy/releases)） |
+| 手机 | Android 5.0+（Android 11+ 支持音频转发） |
+| 网络 | 手机与电脑处于同一局域网 |
+| 可选 | Python 3.8+（仅生成图标 / 创建快捷方式时需要） |
+
+---
+
+## 安全说明
+
+本项目**只调用 scrcpy 官方发行包自带的 `adb`**，不含任何修改版二进制。
+
+`adb tcpip 5555` 会在局域网中开放调试端口。请注意：
+
+- 仅在**可信网络**（家庭 / 办公）中使用
+- 不要在公共 WiFi 下保持无线调试开启
+- 用完后可执行 `adb usb` 关闭 TCP 模式
+
+详细说明见 [docs/SECURITY.md](docs/SECURITY.md)。
+
+---
+
+## 贡献
+
+欢迎提 Issue 和 PR。尤其欢迎：
+
+- **机型适配反馈** —— 某些品牌的 WiFi 网卡名不是 `wlan0`，遇到问题请附上 `adb shell ip addr` 输出
+- **macOS / Linux 实测反馈** —— 目前主要验证环境是 Windows
+- **更完善的错误诊断** —— 如果你踩到了脚本没覆盖的坑
+
+---
+
+## 致谢
+
+- [scrcpy](https://github.com/Genymobile/scrcpy) by Genymobile —— 本项目只是它的一个易用性封装
+- 所有被测机型的贡献者
+
+## 许可
+
+[MIT](LICENSE)
+
+> 本项目与 Genymobile 官方无关，仅为社区工具。
