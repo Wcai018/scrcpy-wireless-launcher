@@ -8,7 +8,9 @@ REM  编码：GBK (CP936)  CRLF 行尾  —— 请勿存成 UTF-8，否则中文会乱码
 REM
 REM  ---- 两个常用功能（scrcpy 原生能力，无需额外安装）----
 REM   1) 电脑打字直接进手机：默认就开着，敲键盘即可
-REM   2) 横竖屏切换：投屏窗口里按 MOD+r
+REM      中文输入：电脑输入法保持英文，敲拼音，手机输入法会组词上屏
+REM      （启动时自动带 --keyboard=uhid，原理见 README）
+REM   2) 粘贴电脑剪贴板到手机：投屏窗口里按 MOD+v
 REM      MOD = 左Alt 或 左Win
 REM ============================================================================
 
@@ -155,17 +157,20 @@ echo   [OK] 已连接: !TXDEV!  ^(!TXMODEL!^)
 echo   [3/3] 正在启动投屏 ...
 echo.
 echo   ----------------------------------------------
-echo    电脑打字直接进手机，敲键盘就行
-echo    中文输入: 按 MOD+v 粘贴电脑剪贴板
-echo              （用电脑输入法直接打中文会被丢，原因见 README）
-echo    横竖屏:   MOD+r 切设备方向
-echo              MOD+左/右 转画面   MOD+f 全屏
+echo    电脑打字直接进手机：鼠标点一下投屏窗口再敲键
+echo    中文输入: 电脑输入法保持英文，敲拼音
+echo              手机输入法会组词上屏
+echo    粘贴中文: 电脑复制后按 MOD+v
 echo    返回/主页: MOD+b / 右键     MOD+h
 echo    MOD = 左Alt 或 左Win
 echo   ----------------------------------------------
 echo.
 
-scrcpy.exe -s !TXDEV! --window-title="手机投屏" !EXTRA_ARGS!
+REM --keyboard=uhid 是中文输入的关键：把电脑键盘模拟成手机的物理键盘，
+REM 手机输入法才能照着你敲的拼音组词。
+REM 不加这个参数（默认 sdk 模式）时，电脑组好的中文会走文本通路被丢弃。
+REM 依据与实测见 README「键盘输入：电脑上直接打中文」。
+scrcpy.exe -s !TXDEV! --window-title="手机投屏" --keyboard=uhid !EXTRA_ARGS!
 
 set "RC=!errorlevel!"
 popd

@@ -112,55 +112,74 @@ That's it. No cable needed from now on.
 
 ---
 
-## Keyboard input and orientation
+## Keyboard input: type Chinese directly from your computer
 
-Both are native scrcpy features — **nothing extra to install or configure**. This project
-just surfaces them and documents the sharp edges.
+Focus the mirroring window and just type — this is a native scrcpy capability, and this
+project wires it up with the right default.
 
-### Typing on your computer, into your phone
+### The one-line rule
 
-Focus the mirroring window and just type. This is on by default (`--keyboard=sdk`).
-
-**There is a real catch with Chinese input:**
-
-| How you type | Works? | Notes |
+| Where you want to type | PC keyboard layout | Result |
 |---|---|---|
-| Latin letters / digits | ✅ | Injected as keycodes |
-| Pinyin, let the **phone's** IME compose | ✅ | Letters go as keycodes; the phone's IME does the conversion |
-| Pre-composed Chinese from a **PC IME** | ❌ | **Silently dropped** |
-| `MOD+v` to paste your clipboard | ✅ | The recommended way for Chinese |
+| On the **computer** | **Chinese** | Chinese appears on the computer as usual |
+| In the **mirroring window** | **English** | Type pinyin → the phone's IME composes Chinese |
 
-Why does a PC IME fail? scrcpy's server passes that text through
-`KeyCharacterMap.getEvents()`, whose mapping only covers ASCII. Chinese characters have
-no keycode, the call returns `null`, and the code `continue`s past it with only a warning.
+**Just remember: keep the PC layout on English while typing into the mirror.**
 
-> Source: `server/src/main/java/com/genymobile/scrcpy/control/Controller.java`,
-> methods `injectChar()` and `injectText()`.
+### Why English and not Chinese
 
-So for Chinese: **type pinyin and let the phone's IME handle it**, or **use `MOD+v`**.
+This is the easiest trap to fall into, so here is the mechanism up front.
 
-### Portrait / landscape
+scrcpy has two **completely different** paths for keyboard input:
 
-| Shortcut | Effect |
+| Path | What it sends | Chinese? |
+|---|---|---|
+| Key path `INJECT_KEYCODE` | individual **keycodes** | ✅ Yes. The phone's IME gets `n-i-h-a-o` and composes 你好 itself |
+| Text path `INJECT_TEXT` | a **pre-composed string** | ❌ No. `KeyCharacterMap.getEvents()` only covers ASCII; Chinese returns `null` |
+
+**Which path is used depends on the PC IME's current state:**
+
+- PC IME in **Chinese** mode → composes first → takes the text path → Chinese is dropped
+- PC IME in **English** mode → raw keys pass through → takes the key path →
+  **the phone's IME composes, Chinese works**
+
+So "I switched the PC IME to Chinese and nothing happens in the mirror" is not a bug —
+it is an inherent limit of the text path.
+
+### How this project solves it: `--keyboard=uhid` (default)
+
+The launcher now passes `--keyboard=uhid`, which makes the computer look like a
+**physical keyboard** to the phone (via the Linux UHID kernel module — not Bluetooth,
+and no real hardware involved).
+
+Keys then arrive as a physical keyboard would, the phone's IME composes, and Chinese
+lands in the field.
+
+**Verified on real hardware** (realme RMX5010 / Android 16 / scrcpy 3.3.3): the uhid
+keyboard registers as `/dev/input/event9`, `dumpsys input` shows
+`Classes: KEYBOARD | ALPHAKEY`, `Enabled: true`; typing pinyin in the Bilibili search
+box with the PC on English produced Chinese that landed in the field and search history.
+
+### No phone-side configuration needed
+
+scrcpy's docs mention configuring the physical keyboard layout on the device.
+**Measured result: you don't have to.**
+
+On the test device the Physical keyboard page already showed the layout as
+**Chinese (China)** — nothing to change. If another model fails to produce Chinese,
+open **Settings → System → Languages and input → Physical keyboard** and check the
+keyboard named `scrcpy` (it only appears while mirroring). Press `MOD+k` to open that
+page directly.
+
+### Other input methods
+
+| Method | Notes |
 |---|---|
-| `MOD+r` | Rotate the **device** (portrait ↔ landscape) |
-| `MOD+Left` / `MOD+Right` | Rotate only the **picture in the window** |
-| `MOD+f` | Fullscreen |
+| Pinyin + phone IME composition | ✅ Recommended (with the PC on English) |
+| `MOD+v` to paste the PC clipboard | ✅ Best for long Chinese text; independent of IME state |
+| Pre-composed Chinese from a PC IME | ❌ The text path does not support CJK; it is dropped |
 
 `MOD` defaults to **left Alt** or **left Win**.
-
-`MOD+r` calls the system `freezeRotation`, and preserves your auto-rotate setting
-(if it was on, it is restored afterwards).
-
-⚠️ **Note**: if the foreground app pins its own orientation (most video apps, games,
-WeChat), it will ignore the system rotation and `MOD+r` appears to do nothing.
-That is the app's behaviour, not a bug here.
-
-To always start in landscape, set in `config.ini`:
-
-```ini
-EXTRA_ARGS=--no-audio --display-orientation=90
-```
 
 ---
 
