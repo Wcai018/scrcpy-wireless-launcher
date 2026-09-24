@@ -112,6 +112,58 @@ That's it. No cable needed from now on.
 
 ---
 
+## Keyboard input and orientation
+
+Both are native scrcpy features — **nothing extra to install or configure**. This project
+just surfaces them and documents the sharp edges.
+
+### Typing on your computer, into your phone
+
+Focus the mirroring window and just type. This is on by default (`--keyboard=sdk`).
+
+**There is a real catch with Chinese input:**
+
+| How you type | Works? | Notes |
+|---|---|---|
+| Latin letters / digits | ✅ | Injected as keycodes |
+| Pinyin, let the **phone's** IME compose | ✅ | Letters go as keycodes; the phone's IME does the conversion |
+| Pre-composed Chinese from a **PC IME** | ❌ | **Silently dropped** |
+| `MOD+v` to paste your clipboard | ✅ | The recommended way for Chinese |
+
+Why does a PC IME fail? scrcpy's server passes that text through
+`KeyCharacterMap.getEvents()`, whose mapping only covers ASCII. Chinese characters have
+no keycode, the call returns `null`, and the code `continue`s past it with only a warning.
+
+> Source: `server/src/main/java/com/genymobile/scrcpy/control/Controller.java`,
+> methods `injectChar()` and `injectText()`.
+
+So for Chinese: **type pinyin and let the phone's IME handle it**, or **use `MOD+v`**.
+
+### Portrait / landscape
+
+| Shortcut | Effect |
+|---|---|
+| `MOD+r` | Rotate the **device** (portrait ↔ landscape) |
+| `MOD+Left` / `MOD+Right` | Rotate only the **picture in the window** |
+| `MOD+f` | Fullscreen |
+
+`MOD` defaults to **left Alt** or **left Win**.
+
+`MOD+r` calls the system `freezeRotation`, and preserves your auto-rotate setting
+(if it was on, it is restored afterwards).
+
+⚠️ **Note**: if the foreground app pins its own orientation (most video apps, games,
+WeChat), it will ignore the system rotation and `MOD+r` appears to do nothing.
+That is the app's behaviour, not a bug here.
+
+To always start in landscape, set in `config.ini`:
+
+```ini
+EXTRA_ARGS=--no-audio --display-orientation=90
+```
+
+---
+
 ## Why this exists
 
 Raw scrcpy wireless mode has a few recurring papercuts. All handled here:
@@ -120,9 +172,14 @@ Raw scrcpy wireless mode has a few recurring papercuts. All handled here:
 |---|---|---|
 | 3 commands before every session | ✗ | Double-click |
 | Wireless debugging dies on reboot | Re-read the manual | `setup` restores it |
-| IP changed → connection fails | `unable to connect` | Detects and explains |
+| IP changed → connection fails | `unable to connect` | Rescans the LAN automatically |
 | Hangs when unreachable | Long blocking wait | Ping probe, fails in ~2s |
+| Another device also listens on 5555 | May connect to the wrong thing | Verifies `getprop`, Android only |
 | New machine needs reconfiguration | ✗ | Copy `config.ini` |
+
+> On "wrong device": TV boxes, NAS units, routers and IoT gear can also run `adbd` on
+> port 5555. `adb connect` succeeds and `adb devices` shows `device` — but the shell is
+> not Android. This project checks for `/system/bin/getprop` and skips anything else.
 
 ---
 
@@ -143,6 +200,22 @@ SCRCPY_DIR=D:\Tools\scrcpy
 # Extra arguments passed to scrcpy
 EXTRA_ARGS=--no-audio
 ```
+
+### Changed networks?
+
+Nothing to edit. The launcher looks for the phone in this order:
+
+1. An already-live wireless connection → use it
+2. The cached address in `phone_ip.txt` (last successful connection)
+3. `PHONE_IP` from `config.ini`
+4. All of the above fail → scan the local `/24` (about 1–2 seconds)
+
+Step 4 needs Python. **It works without Python too** — you just have to edit
+`PHONE_IP` in `config.ini` yourself when the network changes
+(on the phone: Settings → WLAN → current network details).
+
+The scan only finds hosts with port 5555 open, and **an open port is not proof of a
+phone** — so every candidate is re-verified as Android. See "Why this exists" above.
 
 ### Common recipes
 
@@ -257,6 +330,7 @@ scrcpy-wireless-launcher/
 │   ├── create-shortcut.py       # Desktop shortcut (cross-platform)
 │   │                            #   [only the Windows branch is verified]
 │   ├── generate-icon.py         # Regenerate the icon        [VERIFIED]
+│   ├── find-phone.py            # Scan the LAN for the phone  [VERIFIED]
 │   └── fix-encoding.py          # Convert .bat back to GBK   [VERIFIED]
 ├── assets/
 │   ├── icon.png

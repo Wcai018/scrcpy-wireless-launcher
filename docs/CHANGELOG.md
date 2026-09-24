@@ -7,6 +7,46 @@
 
 ---
 
+## [1.1.0] - 2026-09-24
+
+### 平台支持状态
+
+同 1.0.0，无变化：**Windows + Android 已验证，macOS / Linux 仍未测试**。
+
+### 新增
+
+- **换网络自动重扫** `scripts/find-phone.py`
+  - 手机 IP 由路由器 DHCP 分配，换个网络（公司 ↔ 家里）就会变
+  - 启动器现在按「已有连接 → 缓存 → `config.ini` → 扫描局域网」的顺序查找
+  - 扫描只覆盖 `/24`（253 个地址，约 1~2 秒）；`/16` 要扫 6 万多个，不现实
+  - 需要本机有 Python；**没有 Python 也能用**，只是换网络时要手改 `PHONE_IP`
+
+- **设备身份校验** —— 拒绝非 Android 的 `adbd`
+  - 局域网里的电视盒子 / NAS / 路由器 / IoT 也可能在 5555 上跑 `adbd`，
+    能被 `adb connect` 上、`adb devices` 也显示 `device`，但 shell 根本不是 Android
+  - 现在连接后会校验 `/system/bin/getprop` 是否存在，不是 Android 就跳过并打印原因
+  - `launch.bat` 内可选设置 `EXPECTED_MODEL` 进一步限定型号
+
+- **文档：键盘输入与横竖屏**
+  - 说明电脑打字直接进手机（默认开启，无需配置）
+  - 说明中文输入的可行与不可行路径，附上游源码依据
+  - 说明 `MOD+r`（切设备方向）与 `MOD+左/右`（只转窗口画面）的区别
+
+### 修复
+
+- `launch.bat` 有一行误写成 `echo.echo   ====...`，导致该行把 `echo` 当正文打印出来
+- `launch.bat` 调用 `scripts\find-phone.py` 时用了相对路径，但此时 cwd 已被
+  `pushd` 切到 scrcpy 目录，必然找不到 —— 改为 `%ROOT%` 绝对路径
+- `phone_ip.txt` 未加入 `.gitignore`，可能把个人内网 IP 提交上去
+
+### 已知问题
+
+- 扫描依赖 Python（可选，缺失时降级为手动改 `PHONE_IP`）
+- 「校验通过」这条正向路径尚未在真机上验证（测试时手边没有可用设备），
+  负向路径（拒绝非 Android）已实测
+
+---
+
 ## [1.0.0] - 2026-09-22
 
 ### 平台支持状态
@@ -83,3 +123,53 @@
 
 **教训**：必须用 `win32com.client.Dispatch("WScript.Shell").CreateShortCut()`
 才能完整写入所有属性。
+
+### adb shell 的输出行尾是两个 CR
+
+在 .bat 里把 `adb shell xxx` 的输出读进变量再比较，会莫名其妙失败。
+实测十六进制是 `41 42 43 31 32 33 0D 0D 0A` —— **`\r\r\n`，两个 CR**。
+而 `for /f` 不会剥掉尾部的 CR，于是变量变成 `"/system/bin/getprop\r"`，
+拿它做精确字符串比较必然不相等。
+
+最坏的情况是「判据写反」：本想拒绝假设备，结果把真设备也一起拒了。
+
+**教训**：判断某行输出用 `findstr /R /C:"^锚定内容"`，让 findstr 自己处理行尾；
+需要取字符串则用 `set /p VAR=< 文件`（`set /p` 会连行尾一起吃掉）。
+两条路都实测过。
+
+### 端口开着不等于就是手机
+
+扫描局域网时发现一台设备开着 5555，`adb connect` 成功、`adb devices` 显示 `device`，
+但：
+- 型号自称 `Nexus_4 / mako`（2012 年的机型）
+- `getprop`、`settings` 命令都不存在
+- MAC 前缀 `00:E0:4C` 是 Realtek（网卡/SoC 厂商，不是手机厂商）
+
+判断它是一台跑着 `adbd` 的非 Android Linux 设备（路由器 / NAS / 盒子一类）。
+
+更麻烦的是，**两个直觉上的判据都不可信**：
+
+| 判据 | 实测结果 |
+|---|---|
+| 命令退出码 | 命令不存在时**依然返回 0** |
+| 报错走 stderr | 实际走 **stdout**，会污染解析 |
+
+**教训**：只认 `/system/bin/getprop` 是否存在（用 findstr 锚定行首判断）。
+另外，连接前多验一步的成本，远低于把投屏打到一台电视上的成本。
+
+### pushd 之后相对路径失效
+
+`launch.bat` 里用 `pushd` 切到 scrcpy 目录，是为了避免路径含空格时
+`for /f` 的引号嵌套出错。但切完之后，`scripts\find-phone.py` 就被解析成
+`<scrcpy目录>\scripts\find-phone.py`，报 `No such file or directory`。
+
+**教训**：`pushd` 之后访问本项目自己的文件，一律用 `%ROOT%` 绝对路径。
+
+### Python 输出编码与 cmd 控制台不一致
+
+Python 被管道 / 重定向时默认按 **UTF-8** 输出，而 cmd 控制台是 **GBK**。
+结果：`.bat` 的中文显示正常，Python 脚本的中文全是乱码。
+
+**教训**：在 .bat 里调用 Python 前设 `PYTHONIOENCODING=gbk`，与本 .bat 的编码对齐。
+Python 侧再加 `sys.stdout.reconfigure(errors="replace")` 兜底 ——
+这里只是提示文字不是数据，个别字降级成 `?` 可以接受，抛异常中断扫描不行。

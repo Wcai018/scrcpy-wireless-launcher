@@ -1,5 +1,6 @@
 # ---- 用户配置（含个人 IP，不应提交）----
 config.ini
+phone_ip.txt
 
 # ---- 编辑器 / IDE ----
 .vscode/

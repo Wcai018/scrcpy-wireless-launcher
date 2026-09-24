@@ -102,7 +102,20 @@ jobs:
           python -m py_compile scripts/create-shortcut.py
           python -m py_compile scripts/generate-icon.py
           python -m py_compile scripts/fix-encoding.py
+          python -m py_compile scripts/find-phone.py
           echo "✅ Python 脚本语法检查通过"
+
+      - name: 冒烟测试 find-phone.py 的参数校验
+        run: |
+          # 端口传非数字时必须报错退出(2)，而不是静默当成默认端口继续扫。
+          # 这类「坏参数被静默接受」的问题在跨平台脚本里最容易漏。
+          python scripts/find-phone.py abc
+          rc=$?
+          if [ "$rc" -ne 2 ]; then
+            echo "❌ 端口参数非法时退出码应为 2，实际为 $rc"
+            exit 1
+          fi
+          echo "✅ 非法端口参数被正确拒绝"
 
       - name: 测试图标生成
         run: python scripts/generate-icon.py

@@ -156,6 +156,56 @@ scrcpy
 
 ---
 
+## 键盘输入与横竖屏
+
+这两个都是 scrcpy 的原生能力，**不需要额外安装或配置**，本项目只是把它们接出来并写清楚。
+
+### 电脑打字直接进手机
+
+投屏窗口获得焦点后，直接敲键盘就会输入到手机。默认模式（`--keyboard=sdk`）本来就是开着的。
+
+**中文输入有个坑，得说明白：**
+
+| 输入方式 | 是否可用 | 说明 |
+|---|---|---|
+| 英文 / 数字直接敲 | ✅ | 走 keycode 注入 |
+| 敲拼音，让**手机输入法**上屏 | ✅ | 字母走 keycode，手机的搜狗 / 百度输入法负责组词 |
+| 用**电脑输入法**打好中文再敲 | ❌ | 会被**静默丢弃** |
+| 按 `MOD+v` 粘贴电脑剪贴板 | ✅ | 推荐的中文输入方式 |
+
+为什么「电脑输入法打好中文」不行？scrcpy 服务端把这类文本交给
+`KeyCharacterMap.getEvents()` 转按键事件，而这个映射表只覆盖 ASCII ——
+中文没有对应 keycode，转换返回 `null`，代码里直接 `continue` 跳过，只留一行 warning。
+
+> 依据：`server/src/main/java/com/genymobile/scrcpy/control/Controller.java`
+> 的 `injectChar()` 与 `injectText()`。
+
+所以中文推荐两条路：**敲拼音让手机输入法组词**，或者**用 `MOD+v` 粘贴**。
+
+### 横竖屏切换
+
+| 快捷键 | 作用 |
+|---|---|
+| `MOD+r` | 切换**手机**的屏幕方向（竖屏 ↔ 横屏） |
+| `MOD+左` / `MOD+右` | 只旋转**电脑窗口里画面**的方向 |
+| `MOD+f` | 全屏 |
+
+`MOD` 默认是**左 Alt** 或**左 Win** 键。
+
+`MOD+r` 的实现是调用系统 `freezeRotation` 改设备方向，并且会保留你原本的自动旋转开关
+（原本开着，转完再恢复）。
+
+⚠️ **注意**：如果当前 App 在自己的清单里写死了方向（多数视频 App、游戏、微信都是），
+它会忽略系统旋转 —— 这时按 `MOD+r` 看不到变化。这是 App 的行为，不是工具的问题。
+
+想固定横屏启动，改 `config.ini`：
+
+```ini
+EXTRA_ARGS=--no-audio --display-orientation=90
+```
+
+---
+
 ## 为什么需要它
 
 裸用 scrcpy 的无线模式有几个反复踩的坑，这个项目把它们都处理了：
@@ -164,9 +214,14 @@ scrcpy
 |---|---|---|
 | 每次投屏要敲 3 条命令 | ✗ | 双击图标 |
 | 手机重启后无线调试失效 | 需重新查手册 | `setup` 一键恢复 |
-| IP 变化后连接失败 | 报 `unable to connect` | 读出实际 IP 并给提示 |
+| IP 变化后连接失败 | 报 `unable to connect` | 自动重扫局域网，不用手改配置 |
 | 连不上时卡住无响应 | 长时间阻塞 | 先 ping 探活，2 秒内给出诊断 |
+| 局域网里别的设备也开着 5555 | 可能连错设备 | 校验 `getprop`，只认 Android |
 | 换电脑要重新配置 | ✗ | 拷 `config.ini` 即可 |
+
+> 关于「连错设备」：局域网里的电视盒子、NAS、路由器、IoT 设备也可能在 5555 上跑
+> `adbd`，能被 `adb connect` 上、`adb devices` 也显示 `device`。本项目在连接后
+> 会校验设备上是否存在 `/system/bin/getprop`，不是 Android 就跳过并打印原因。
 
 ---
 
@@ -187,6 +242,21 @@ SCRCPY_DIR=D:\Tools\scrcpy
 # 传给 scrcpy 的额外参数
 EXTRA_ARGS=--no-audio
 ```
+
+### 换网络了怎么办
+
+不用改配置。启动器按这个顺序找手机：
+
+1. 已经有活着的无线连接 → 直接用
+2. `phone_ip.txt` 里的缓存地址（上次成功连过的）
+3. `config.ini` 里的 `PHONE_IP`
+4. 都失败 → 扫一遍当前局域网（`/24` 网段，约 1~2 秒）
+
+第 4 步需要本机有 Python。**没有 Python 也能用**，只是换网络时要手动改
+`config.ini` 的 `PHONE_IP`（手机上看：设置 → WLAN → 当前网络详情）。
+
+扫描靠的是「谁开着 5555 端口」，但**端口开着不等于就是手机** ——
+所以扫到的每个候选都会再验一次是不是 Android，见下文「为什么需要它」。
 
 ### 常用参数
 
@@ -232,6 +302,46 @@ EXTRA_ARGS=--no-audio --turn-screen-off
 <summary><b>提示「adb 连接失败」但手机能 ping 通</b></summary>
 
 通常是手机重启过，无线 adb 被关闭了。**插数据线重跑一次 `setup`** 即可。
+
+</details>
+
+<details>
+<summary><b>提示「不是 Android 设备」，但我确定手机开着无线调试</b></summary>
+
+说明扫到的那台不是手机。局域网里别的设备（电视盒子 / NAS / 路由器 / IoT）
+也可能在 5555 上跑 `adbd`，能被 `adb connect` 上，但 shell 不是 Android。
+
+本项目会逐个候选去验，自动跳到下一个。如果**所有**候选都被跳过，
+那多半是手机本身没开无线调试 —— 插线重跑 `setup`。
+
+想进一步缩小范围，可以在 `launch.bat` 里设置 `EXPECTED_MODEL`（见脚本内注释），
+只接受指定型号。
+
+</details>
+
+<details>
+<summary><b>中文打不进去 / 只出英文</b></summary>
+
+这是 scrcpy 的既有行为，不是本项目的 bug。原因见上文「键盘输入与横竖屏」。
+
+两条可行路径：
+
+- 敲**拼音**，让**手机的**输入法组词上屏
+- 用电脑输入法打好，按 `MOD+v` 粘贴过去
+
+</details>
+
+<details>
+<summary><b>按 MOD+r 没反应，画面没转</b></summary>
+
+先确认两点：
+
+1. `MOD` 是**左 Alt** 或**左 Win**（不是 Ctrl / Shift）
+2. 当前 App 是否自己锁定了方向 —— 视频 App、游戏、微信通常写死了竖屏或横屏，
+   会忽略系统旋转
+
+想确认到底是哪边的问题：按 `MOD+左` / `MOD+右`。这个是旋转**窗口里的画面**，
+不受 App 方向锁定影响。如果它能转、`MOD+r` 不能，那就是 App 锁了方向。
 
 </details>
 
@@ -299,6 +409,7 @@ scrcpy-wireless-launcher/
 │   ├── create-shortcut.ps1      # 生成桌面快捷方式（Windows） [已验证]
 │   ├── create-shortcut.py       # 生成桌面快捷方式（跨平台）  [仅 Windows 分支验证]
 │   ├── generate-icon.py         # 重新生成图标                [已验证]
+│   ├── find-phone.py            # 扫描局域网找手机（换网络兜底）[已验证]
 │   └── fix-encoding.py          # 把 .bat 转回 GBK 编码       [已验证]
 ├── assets/
 │   ├── icon.png
