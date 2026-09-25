@@ -7,6 +7,45 @@
 
 ---
 
+## [1.3.1] - 2026-09-25
+
+### 修复
+
+- **`setup.bat` 找不到非标准位置的 scrcpy**（用户实测反馈）
+  - 现象：scrcpy 装在 `D:\Wcai\scrcpy-win64-v4.1`，初始化却直接报
+    `[X] 没有找到 scrcpy.exe`，要求手动输入路径 —— 文件明明就在电脑里
+  - 原因：原来的定位只查 4 个来源 —— 项目根目录、`config.ini`、`PATH`、
+    以及 5 个写死的常见位置（`C:\scrcpy`、`C:\Program Files\scrcpy`、
+    `%LOCALAPPDATA%\scrcpy`、`%USERPROFILE%\scrcpy`、scoop）。
+    全不命中就只能手动输入。而**新下载的副本没有 `config.ini`**
+    （它含个人 IP，被 `.gitignore` 忽略），所以每个人第一次跑都会撞上
+  - 修复：新增两级自动搜索，完整顺序变为
+
+    | 顺序 | 位置 | 说明 |
+    |---|---|---|
+    | 1a | `%ROOT%\scrcpy.exe` | 项目根目录 |
+    | 1b | `%ROOT%\scrcpy*\scrcpy.exe` | scrcpy 解压进项目里 |
+    | 1c | `config.ini` 的 `SCRCPY_DIR` | 上次用过的 |
+    | **1d** | **`%ROOT%\..\scrcpy*`、`%ROOT%\..\..\scrcpy*`** | **新增：与启动器同一层 / 上一层** |
+    | 1e | `PATH` | 同前 |
+    | 1f | 常见位置 + `Downloads\scrcpy*`、`Desktop\scrcpy*` | 扩充 |
+    | **1g** | **全盘两层扫描 `<盘>:\*\scrcpy*`** | **新增：最后手段** |
+
+- **全盘扫描发现多个副本时不猜，列出来让用户选**
+  - 实测会同时扫到新旧版本（如 `D:\Wcai\scrcpy-win64-v4.1` 与某份旧版备份），
+    静默取第一个可能取到错的那个
+  - 现在：1 个候选直接采用；多个则编号列出，输入序号选择，回车退回手动输入
+
+### 实测
+
+- 全盘两层扫描（只枚举目录名、不递归文件）：**C/D 两盘 0.2 秒**完成
+- 删掉 `config.ini` 后运行 `setup.bat`，第 1 步自动定位到
+  `D:\Wcai\scrcpy-win64-v4.1`，全程无手动输入
+- 坑：cmd 的 `for /d` **不支持中间通配符** —— 写 `"D:\*\scrcpy*"` 直接返回空，
+  必须嵌套两层 `for` 才等价
+
+---
+
 ## [1.3.0] - 2026-09-25
 
 ### 平台支持状态

@@ -26,12 +26,22 @@ REM ==================== 1. 定位 scrcpy ====================
 echo   [1/6] 定位 scrcpy ...
 
 set "SCRCPY_DIR="
+
+REM ---- 1a. 项目根目录 ----
 if exist "%ROOT%\scrcpy.exe" (
     set "SCRCPY_DIR=%ROOT%"
     goto :FOUND_SCRCPY
 )
 
-REM 读旧配置
+REM ---- 1b. 项目根目录下的子目录（把 scrcpy 解压进项目里）----
+for /d %%p in ("%ROOT%\scrcpy*") do (
+    if exist "%%~fp\scrcpy.exe" (
+        set "SCRCPY_DIR=%%~fp"
+        goto :FOUND_SCRCPY
+    )
+)
+
+REM ---- 1c. 读旧配置 ----
 if exist "%ROOT%\config.ini" (
     for /f "usebackq tokens=1,* delims==" %%a in ("%ROOT%\config.ini") do (
         if /i "%%a"=="SCRCPY_DIR" if not "%%b"=="" if exist "%%b\scrcpy.exe" set "SCRCPY_DIR=%%b"
@@ -39,7 +49,22 @@ if exist "%ROOT%\config.ini" (
 )
 if defined SCRCPY_DIR goto :FOUND_SCRCPY
 
-REM 从 PATH 找
+REM ---- 1d. 同级 / 上级目录 ----
+REM  最常见的情况：scrcpy 和本项目解压在同一层，例如
+REM      D:\Wcai\scrcpy-wireless-launcher-main   <- 本项目
+REM      D:\Wcai\scrcpy-win64-v4.1               <- scrcpy
+REM  这里会扫到本项目自己（名字也以 scrcpy 开头），但它下面没有
+REM  scrcpy.exe，会被 if exist 挡掉。
+for %%r in ("%ROOT%\.." "%ROOT%\..\..") do (
+    for /d %%p in ("%%~fr\scrcpy*") do (
+        if exist "%%~fp\scrcpy.exe" (
+            set "SCRCPY_DIR=%%~fp"
+            goto :FOUND_SCRCPY
+        )
+    )
+)
+
+REM ---- 1e. 从 PATH 找 ----
 for %%i in (scrcpy.exe) do set "SCRC_PATH=%%~$PATH:i"
 if defined SCRC_PATH (
     for %%j in ("!SCRC_PATH!") do set "SCRCPY_DIR=%%~dpj"
@@ -47,10 +72,11 @@ if defined SCRC_PATH (
 )
 if defined SCRCPY_DIR goto :FOUND_SCRCPY
 
-REM 常见安装位置
+REM ---- 1f. 常见安装位置 ----
 for %%d in (
     "C:\scrcpy"
     "C:\Program Files\scrcpy"
+    "C:\Program Files (x86)\scrcpy"
     "%LOCALAPPDATA%\scrcpy"
     "%USERPROFILE%\scrcpy"
     "%USERPROFILE%\scoop\apps\scrcpy\current"
@@ -60,9 +86,67 @@ for %%d in (
         goto :FOUND_SCRCPY
     )
 )
+REM 下载 / 桌面里直接解压 ZIP 的常见结果
+for /d %%p in ("%USERPROFILE%\Downloads\scrcpy*" "%USERPROFILE%\Desktop\scrcpy*") do (
+    if exist "%%~fp\scrcpy.exe" (
+        set "SCRCPY_DIR=%%~fp"
+        goto :FOUND_SCRCPY
+    )
+)
+
+REM ---- 1g. 全盘搜索（最后手段）----
+REM  只枚举 <盘>:\*\scrcpy* 两层的目录名，不递归扫文件，实测 0.2 秒扫完 C/D 盘。
+REM  注意 cmd 的 for /d 不支持中间通配（写 "D:\*\scrcpy*" 直接返回空），
+REM  必须嵌套两层 for 才能达到同样效果 —— 这是实测踩出来的。
+REM  可能扫到多个副本（例如新旧版本并存）。这时不猜、不静默取第一个，
+REM  而是列出来让用户选 —— 选错版本的代价比多问一句大得多。
+set "CAND=%TEMP%\_scrcpy_cands.txt"
+if exist "%CAND%" del "%CAND%" >nul 2>&1
+for %%d in (C D E F G H) do (
+    if exist "%%d:\" (
+        for /d %%a in ("%%d:\*") do (
+            for /d %%b in ("%%~fa\scrcpy*") do (
+                if exist "%%~fb\scrcpy.exe" >>"%CAND%" echo %%~fb
+            )
+        )
+    )
+)
+
+set "CN=0"
+if exist "%CAND%" for /f "usebackq" %%L in ("%CAND%") do set /a CN+=1
+
+if "!CN!"=="1" (
+    set /p SCRCPY_DIR=<"%CAND%"
+    del "%CAND%" >nul 2>&1
+    echo   [i] 全盘搜索到 1 个副本
+    goto :FOUND_SCRCPY
+)
+
+if !CN! GTR 1 (
+    echo.
+    echo   在这台电脑上找到 !CN! 个 scrcpy 副本：
+    echo.
+    set "N=0"
+    for /f "usebackq" %%L in ("%CAND%") do (
+        set /a N+=1
+        echo      [!N!] %%L
+    )
+    echo.
+    set "PICK="
+    set /p "PICK=  输入序号选用（直接回车 = 手动输入路径）: "
+    if defined PICK (
+        set "N=0"
+        for /f "usebackq" %%L in ("%CAND%") do (
+            set /a N+=1
+            if "!N!"=="!PICK!" set "SCRCPY_DIR=%%L"
+        )
+    )
+    del "%CAND%" >nul 2>&1
+    if defined SCRCPY_DIR goto :FOUND_SCRCPY
+)
 
 echo.
-echo   [X] 没有找到 scrcpy.exe
+echo   [X] 没有自动找到 scrcpy.exe
 echo.
 echo   请下载 scrcpy 后解压，并把它的路径填到下面。
 echo   下载地址：https://github.com/Genymobile/scrcpy/releases
@@ -84,7 +168,6 @@ if not exist "!ADB!" (
     exit /b 1
 )
 echo.
-
 REM 复制窗口图标（scrcpy 只认自己目录下的 icon.png）
 if exist "%ROOT%\assets\icon.png" (
     if not exist "!SCRCPY_DIR!\icon.png" (
