@@ -124,7 +124,20 @@ echo.
 REM ==================== 3. 读取手机 IP ====================
 echo   [3/6] 读取手机 WiFi IP ...
 set "PHONE_IP="
-for /f "tokens=2 delims=/" %%i in ('"!ADB!" -s !USBDEV! shell ip -f inet addr show wlan0 ^| findstr "inet "') do set "PHONE_IP=%%i"
+REM ---- 踩坑记录（2026-09-25 实测）--------------------------------------
+REM  坑1：不能给 !ADB! 加引号。展开后是无空格的绝对路径，加引号会让
+REM       for /f 的单引号解析失败，报「文件名、目录名或卷标语法不正确」，
+REM       变量被赋成空值 —— 表现为「手机连着 WiFi 却说读取不到 IP」。
+REM  坑2：不能写 tokens=2 delims=/。真实输出行是
+REM           inet 192.168.101.48/24 brd ... scope global wlan0
+REM       按 / 切分后 token2 = "24 brd 192.168.101.255 scope global wlan0"，
+REM       是垃圾串不是 IP。应先按空格取第 2 字段拿到 "IP/掩码"，
+REM       再按 / 切一次去掉掩码（掩码可能是 /8 /16 /24，不能写死替换）。
+REM  坑3：两条 for 必须分成两条独立语句。for /f 的集合参数不做延迟展开，
+REM       写成嵌套会拿到旧值。
+REM ---------------------------------------------------------------------
+for /f "tokens=2" %%i in ('!ADB! -s !USBDEV! shell ip -f inet addr show wlan0 ^| findstr /C:"inet "') do set "PHONE_IP=%%i"
+for /f "tokens=1 delims=/" %%j in ("!PHONE_IP!") do set "PHONE_IP=%%j"
 
 if "!PHONE_IP!"=="" (
     echo   [X] 读取不到 WiFi IP —— 手机可能没有连接 WiFi
@@ -189,6 +202,23 @@ if exist "%ROOT%\config.ini" (
 echo   [OK] 配置已保存到 config.ini
 echo.
 
+REM ==================== 创建桌面快捷方式 ====================
+REM 踩坑记录（2026-09-25 实测）：
+REM   原版这里判断的是 scripts\create-shortcut.vbs，但仓库里根本没有这个
+REM   文件（scripts/ 下只有 create-shortcut.ps1 和 create-shortcut.py）。
+REM   if exist 永远为假，整块被静默跳过 —— 表现为「点了 setup.bat，桌面
+REM   不生成图标」。这里改用 .ps1：走 WScript.Shell COM，不依赖 pywin32。
+REM   另外注意：这段必须放在「初始化完成」汇总之前，否则会先宣称已生成、
+REM   再去做创建，顺序反了。
+set "LNK_OK="
+if exist "%ROOT%\scripts\create-shortcut.ps1" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\scripts\create-shortcut.ps1"
+    if not errorlevel 1 set "LNK_OK=1"
+) else (
+    echo   [!] 找不到 scripts\create-shortcut.ps1，跳过创建快捷方式
+)
+echo.
+
 REM ==================== 完成 ====================
 echo   ==================================================
 echo      [OK] 初始化完成！
@@ -199,14 +229,10 @@ echo     scrcpy    : !SCRCPY_DIR!
 echo.
 echo     现在可以拔掉数据线了。
 echo.
-echo     桌面上已生成「手机无线投屏」快捷方式（如果开启了创建）。
-echo     以后双击它即可投屏，无需再插线。
-echo.
-
-REM 顺手创建桌面快捷方式
-if exist "%ROOT%\scripts\create-shortcut.vbs" (
-    echo   正在创建桌面快捷方式 ...
-    cscript //nologo "%ROOT%\scripts\create-shortcut.vbs" >nul 2>&1
+if defined LNK_OK (
+    echo     桌面已生成「手机无线投屏」快捷方式，以后双击它即可投屏。
+) else (
+    echo     [!] 桌面快捷方式没建成，可手动右键运行 scripts\create-shortcut.ps1
 )
 
 echo.

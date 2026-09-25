@@ -85,7 +85,7 @@ adb.exe start-server >nul 2>&1
 REM ---------- 1. 已有活着的连接？ ----------
 call :pick_device
 if not "!TXDEV!"=="" (
-    echo   [OK] 复用已连接设备: !TXDEV!  ^(!TXMODEL!^)
+    echo   [1/3] 复用已连接设备
     goto :launch
 )
 
@@ -191,7 +191,10 @@ REM 必须校验第二列：offline / unauthorized 也会出现在列表里。
 set "TXDEV="
 set "TXMODEL="
 for /f "tokens=1,2" %%a in ('adb.exe devices ^| findstr /C:":%PORT%"') do (
-    if "%%b"=="device" call :accept_if_android "%%a"
+    if "%%b"=="device" REM 注意：这里 %%a 不能加引号。加了引号后 %1 会连引号一起带进去，
+REM set "TXDEV=%1" 得到的值变成 "192.168.101.48:5555"（含引号），
+REM 后续打印/写缓存/拼 -s 参数全是脏的（2026-09-25 实测）。
+        call :accept_if_android %%a
 )
 exit /b 0
 
